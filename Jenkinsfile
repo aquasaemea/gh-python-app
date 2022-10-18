@@ -7,10 +7,11 @@ timestamps {
                 printenv | sort
             '''
         }
-        stage('Security check by Aqua') {
+        stage('Code Repository Scanned by Aqua') {
             withCredentials([
                 string(credentialsId: 'AQUA_KEY', variable: 'AQUA_KEY'), 
-                string(credentialsId: 'AQUA_SECRET', variable: 'AQUA_SECRET')
+                string(credentialsId: 'AQUA_SECRET', variable: 'AQUA_SECRET'),
+		string(credentialsId: 'GITHUB_TOKEN', variable: 'GITHUB_TOKEN')
             ]) {
                 sh '''
                     export TRIVY_RUN_AS_PLUGIN=aqua
@@ -29,10 +30,26 @@ timestamps {
 	        echo the image has been built !!
             '''
         }
+		
+	stage('Image Scanning by Aqua') {
+            withCredentials([
+                string(credentialsId: 'AQUA_REGISTRY_USER', variable: 'AQUA_REGISTRY_USER'), 
+                string(credentialsId: 'AQUA_REGISTRY_PASSWORD', variable: 'AQUA_REGISTRY_PASSWORD'),
+		string(credentialsId: 'AQUA_REGISTRY', variable: 'AQUA_REGISTRY'),
+		string(credentialsId: 'AQUA_HOST', variable: 'AQUA_HOST'), 
+		string(credentialsId: 'AQUA_SCANNER_TOKEN', variable: 'AQUA_SCANNER_TOKEN')
+            ]) {
+            	sh '''
+	            docker login -u "$AQUA_REGISTRY_USER" -p "$AQUA_REGISTRY_PASSWORD" $AQUA_REGISTRY
+	            docker run -e BUILD_JOB_NAME=$JOB_NAME -e BUILD_URL=$BUILD_URL -e BUILD_NUMBER=$BUILD_NUMBER --rm -v /var/run/docker.sock:/var/run/docker.sock $AQUA_REGISTRY/scanner:2022.4.46 scan --register --registry "CI/CD_andres_images" --local "aquasaemea/mynodejs-app:1.0" --host $AQUA_HOST --token $AQUA_SCANNER_TOKEN --show-negligible --html > aquascan.html
+            	'''
+	       }
+        }
+		
         stage('Manifest Generation') {
             withCredentials([
                 // Replace GITLAB_CREDENTIALS_ID with the id of your gitlab credentials
-                usernamePassword(credentialsId: 'jenkinsgithub', usernameVariable: 'GITHUB_USER', passwordVariable: 'GITHUB_TOKEN'), 
+                string(credentialsId: 'GITHUB_TOKEN', variable: 'GITHUB_TOKEN'), 
                 string(credentialsId: 'AQUA_KEY', variable: 'AQUA_KEY'), 
                 string(credentialsId: 'AQUA_SECRET', variable: 'AQUA_SECRET')
             ]) {
@@ -54,9 +71,15 @@ timestamps {
                         --aqua-key ${AQUA_KEY} \
                         --aqua-secret ${AQUA_SECRET} \
                         --access-token ${GITHUB_TOKEN} \
+			--output sbom.json \
                         --artifact-path .
                 '''
             }
         }
+        post {
+       	    always {
+            	archiveArtifacts artifacts: '/'
+       	    }
+    	}
     }
 }
