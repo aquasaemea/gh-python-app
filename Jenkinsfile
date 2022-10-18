@@ -31,20 +31,20 @@ timestamps {
             '''
         }
 		
-	stage('Image Scanning by Aqua') {
-            withCredentials([
-                string(credentialsId: 'AQUA_REGISTRY_USER', variable: 'AQUA_REGISTRY_USER'), 
-                string(credentialsId: 'AQUA_REGISTRY_PASSWORD', variable: 'AQUA_REGISTRY_PASSWORD'),
-		string(credentialsId: 'AQUA_REGISTRY', variable: 'AQUA_REGISTRY'),
-		string(credentialsId: 'AQUA_HOST', variable: 'AQUA_HOST'), 
-		string(credentialsId: 'AQUA_SCANNER_TOKEN', variable: 'AQUA_SCANNER_TOKEN')
-            ]) {
-            	sh '''
-	            docker login -u "$AQUA_REGISTRY_USER" -p "$AQUA_REGISTRY_PASSWORD" $AQUA_REGISTRY
-	            docker run -e BUILD_JOB_NAME=$JOB_NAME -e BUILD_URL=$BUILD_URL -e BUILD_NUMBER=$BUILD_NUMBER --rm -v /var/run/docker.sock:/var/run/docker.sock $AQUA_REGISTRY/scanner:2022.4.46 scan --register --registry "CI/CD_andres_images" --local "aquasaemea/mynodejs-app:1.0" --host $AQUA_HOST --token $AQUA_SCANNER_TOKEN --show-negligible --html > aquascan.html
-            	'''
-	       }
-        }
+	//stage('Image Scanning by Aqua') {
+        //    withCredentials([
+        //        string(credentialsId: 'AQUA_REGISTRY_USER', variable: 'AQUA_REGISTRY_USER'), 
+        //        string(credentialsId: 'AQUA_REGISTRY_PASSWORD', variable: 'AQUA_REGISTRY_PASSWORD'),
+	//	string(credentialsId: 'AQUA_REGISTRY', variable: 'AQUA_REGISTRY'),
+	//	string(credentialsId: 'AQUA_HOST', variable: 'AQUA_HOST'), 
+	//	string(credentialsId: 'AQUA_SCANNER_TOKEN', variable: 'AQUA_SCANNER_TOKEN')
+        //    ]) {
+        //    	sh '''
+	//            docker login -u "$AQUA_REGISTRY_USER" -p "$AQUA_REGISTRY_PASSWORD" $AQUA_REGISTRY
+	//           docker run -e BUILD_JOB_NAME=$JOB_NAME -e BUILD_URL=$BUILD_URL -e BUILD_NUMBER=$BUILD_NUMBER --rm -v /var/run/docker.sock:/var/run/docker.sock $AQUA_REGISTRY/scanner:2022.4.46 scan --register --registry "Docker Hub" --local "aquasaemea/mynodejs-app:1.0" --host $AQUA_HOST --token $AQUA_SCANNER_TOKEN --show-negligible --html > aquascan.html
+        //    	'''
+	//       }
+        //}
 		
         stage('Manifest Generation') {
             withCredentials([
