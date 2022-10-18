@@ -54,7 +54,7 @@ timestamps {
                         --aqua-key ${AQUA_KEY} \
                         --aqua-secret ${AQUA_SECRET} \
                         --access-token ${GITHUB_TOKEN} \
-                        --artifact-path .
+                        --artifact-path ./requirements.txt
                 '''
             }
         }
