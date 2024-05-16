@@ -1,64 +1,66 @@
-timestamps {
-	node(){
-        checkout scm
-        stage("Preparation"){
-            sh '''
-                find .
-                printenv | sort
-            '''
+pipeline {
+  agent any
+  stages {
+    stage('Aqua Code Scanning') {
+      agent {
+        docker {
+          image 'aquasec/aqua-scanner'    
         }
-        stage('Code Repository Scanned by Aqua') {
-            withCredentials([
-                string(credentialsId: 'AQUA_KEY', variable: 'AQUA_KEY'), 
-                string(credentialsId: 'AQUA_SECRET', variable: 'AQUA_SECRET'),
-		string(credentialsId: 'GITHUB_TOKEN', variable: 'GITHUB_TOKEN')
-            ]) {
-                sh '''
-                    export TRIVY_RUN_AS_PLUGIN=aqua
-                    export trivyVersion=0.32.0
-                    curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b . v${trivyVersion}  
-                    ./trivy plugin update aqua
-                    ./trivy fs --debug --format template --template "@Report-Templates/aqua.tpl" -o report.html --security-checks config,vuln,secret .
+      }
+      steps {
+        withCredentials([
+          string(credentialsId: 'AQUA_KEY', variable: 'AQUA_KEY'),
+          string(credentialsId: 'AQUA_SECRET', variable: 'AQUA_SECRET'),
+          usernamePassword(credentialsId: 'PROVIDER_CREDENTIALS', usernameVariable: 'USERNAME', passwordVariable: 'PASSWORD')
+        ]){
+          sh '''
+            export TRIVY_RUN_AS_PLUGIN=aqua
+            trivy fs --scanners config,vuln,secret --sast --reachability .
 
-                '''
-            }
+            # To customize which severities to scan for, add the following flag: --severity UNKNOWN,LOW,MEDIUM,HIGH,CRITICAL
+            # To enable SAST scanning, add: --sast
+            # To enable reachability scanning, add: --reachability
+            # To enable npm/dotnet/gradle non-lock file scanning, add: --package-json / --dotnet-proj / --gradle
+            # For http/https proxy configuration add env vars: HTTP_PROXY/HTTPS_PROXY, CA-CRET (path to CA certificate)
+          '''
         }
-        stage('Build Docker Image') {
-            // fake build by downloading an image
-	    // docker pull aquasaemea/mynodejs-app:1.0
+      }
+    }
+    stage('Build Docker Image') {
+      steps {
             sh '''
-	        echo the image has been built !!
+	            echo the image has been built !!
             '''
-        }
-		
-	//stage('Image Scanning by Aqua') {
-        //    withCredentials([
-        //        string(credentialsId: 'AQUA_REGISTRY_USER', variable: 'AQUA_REGISTRY_USER'), 
-        //        string(credentialsId: 'AQUA_REGISTRY_PASSWORD', variable: 'AQUA_REGISTRY_PASSWORD'),
-	//	string(credentialsId: 'AQUA_REGISTRY', variable: 'AQUA_REGISTRY'),
-	//	string(credentialsId: 'AQUA_HOST', variable: 'AQUA_HOST'), 
-	//	string(credentialsId: 'AQUA_SCANNER_TOKEN', variable: 'AQUA_SCANNER_TOKEN')
-        //    ]) {
-        //    	sh '''
-	//            docker login -u "$AQUA_REGISTRY_USER" -p "$AQUA_REGISTRY_PASSWORD" $AQUA_REGISTRY
-	//           docker run -e BUILD_JOB_NAME=$JOB_NAME -e BUILD_URL=$BUILD_URL -e BUILD_NUMBER=$BUILD_NUMBER --rm -v /var/run/docker.sock:/var/run/docker.sock $AQUA_REGISTRY/scanner:2022.4.46 scan --register --registry "Docker Hub" --local "aquasaemea/mynodejs-app:1.0" --host $AQUA_HOST --token $AQUA_SCANNER_TOKEN --show-negligible --html > aquascan.html
-        //    	'''
-	//       }
-        //}
-		
-        stage('Manifest Generation') {
-            withCredentials([
-                // Replace GITLAB_CREDENTIALS_ID with the id of your gitlab credentials
-                string(credentialsId: 'GITHUB_TOKEN', variable: 'GITHUB_TOKEN'), 
-                string(credentialsId: 'AQUA_KEY', variable: 'AQUA_KEY'), 
-                string(credentialsId: 'AQUA_SECRET', variable: 'AQUA_SECRET')
-            ]) {
+      }      
+    }
+    /*stage('Aqua Image Scanning ') {
+      steps {
+        withCredentials([
+          string(credentialsId: 'AQUA_REGISTRY_USER', variable: 'AQUA_REGISTRY_USER'), 
+          string(credentialsId: 'AQUA_REGISTRY_PASSWORD', variable: 'AQUA_REGISTRY_PASSWORD'),
+		      string(credentialsId: 'AQUA_HOST', variable: 'AQUA_HOST'), 
+		      string(credentialsId: 'AQUA_SCANNER_TOKEN', variable: 'AQUA_SCANNER_TOKEN')
+          ]){
+            	sh '''
+	              docker login -u "$AQUA_REGISTRY_USER" -p "$AQUA_REGISTRY_PASSWORD" registry.aquasec.com
+	              docker run -e BUILD_JOB_NAME=$JOB_NAME -e BUILD_URL=$BUILD_URL -e BUILD_NUMBER=$BUILD_NUMBER --rm -v /var/run/docker.sock:/var/run/docker.sock registry.aquasec.com/scanner:2404.30.6 scan --register --registry "Docker Hub" --local "aquasaemea/mynodejs-app:1.0" --host $AQUA_HOST --token $AQUA_SCANNER_TOKEN --show-negligible --html > aquascan.html
+            	'''
+	        }
+      }
+    }*/
+    
+    stage('Aqua SBOM Next Generation') {
+      steps {
+        withCredentials([
+          // Replace BITBUCKET_TOKEN with the id of your bitbucket token
+          string(credentialsId: 'BITBUCKET_TOKEN', variable: 'BITBUCKET_TOKEN'),
+          string(credentialsId: 'AQUA_KEY', variable: 'AQUA_KEY'), 
+          string(credentialsId: 'AQUA_SECRET', variable: 'AQUA_SECRET')
+          ]) {
                 // Replace ARTIFACT_PATH with the path to the root folder of your project 
-                // or with the name:tag the newly built image
-		            // --artifact-path "aquasaemea/mynodejs-app:1.0"
-                
+                // or with the name:tag the newly built image     
                 sh '''
-                  export BILLY_SERVER=https://prod-aqua-billy.codesec.aquasec.com
+                  export BILLY_SERVER=https://billy.codesec.aquasec.com
             	    curl -sLo install.sh download.codesec.aquasec.com/billy/install.sh
             	    curl -sLo install.sh.checksum https://github.com/argonsecurity/releases/releases/latest/download/install.sh.checksum
                   if ! cat install.sh.checksum | sha256sum ; then
@@ -70,16 +72,16 @@ timestamps {
                     ./billy generate -v \
                         --aqua-key ${AQUA_KEY} \
                         --aqua-secret ${AQUA_SECRET} \
-                        --access-token ${GITHUB_TOKEN} \
-			--output sbom.json \
+                        --access-token  ${BITBUCKET_TOKEN}  \
                         --artifact-path .
+
+                   # The docker image name:tag of the newly built image
+                   # --artifact-path "my-image-name:my-image-tag" 
+                   # OR the path to the root folder of your project. I.e my-repo/my-app 
+                   # --artifact-path "ARTIFACT_PATH"
                 '''
             }
         }
-        //post {
-       	    //always {
-            	//archiveArtifacts artifacts: '/'
-       	   // }
-    	//}
-    }
+    }  
+  }
 }
