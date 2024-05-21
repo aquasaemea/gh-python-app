@@ -51,8 +51,8 @@ pipeline {
     stage('Aqua SBOM Next Generation') {
       steps {
         withCredentials([
-          // Replace BITBUCKET_TOKEN with the id of your bitbucket token
-          string(credentialsId: 'BITBUCKET_TOKEN', variable: 'BITBUCKET_TOKEN'),
+          // Replace GITHUB_APP_CREDENTIALS_ID with the id of your github app credentials
+          usernamePassword(credentialsId: 'GITHUB_APP_CREDENTIALS_ID', usernameVariable: 'GITHUB_APP', passwordVariable: 'GITHUB_TOKEN'),
           string(credentialsId: 'AQUA_KEY', variable: 'AQUA_KEY'), 
           string(credentialsId: 'AQUA_SECRET', variable: 'AQUA_SECRET')
           ]) {
