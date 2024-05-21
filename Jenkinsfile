@@ -10,7 +10,7 @@ pipeline {
       steps {
         withCredentials([
           string(credentialsId: 'AQUA_KEY', variable: 'AQUA_KEY'),
-          string(credentialsId: 'AQUA_SECRET', variable: 'AQUA_SECRET'),
+          string(credentialsId: 'AQUA_SECRET', variable: 'AQUA_SECRET')
           //usernamePassword(credentialsId: 'PROVIDER_CREDENTIALS', usernameVariable: 'USERNAME', passwordVariable: 'PASSWORD')
         ]){
           sh '''
