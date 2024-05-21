@@ -33,7 +33,7 @@ pipeline {
             '''
       }      
     }
-    /*stage('Aqua Image Scanning') {
+    /*stage('Aqua Image Scanningg') {
       steps {
         withCredentials([
           string(credentialsId: 'AQUA_REGISTRY_USER', variable: 'AQUA_REGISTRY_USER'), 
