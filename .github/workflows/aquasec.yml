@@ -3,9 +3,11 @@ on:
   push:
     branches:
       - master
+      - dependencies-test
   pull_request:
     branches: 
       - master
+      - dependencies-test
       # comment12
       
 env:
